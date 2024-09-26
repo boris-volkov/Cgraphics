@@ -5,6 +5,7 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <signal.h>
+#include <draw.h>
 
 int level = 5;
 
@@ -13,6 +14,8 @@ void cleanup(void){
 	// and set the terminal back to normal mode
 	// and free the font file
 	printf("level: %d\n", level);
+	buffer_reset();
+	free_font();
 }
 
 typedef struct {
@@ -26,12 +29,12 @@ int randint(int a, int b){
 	return rand()%(b-a+1) + a;
 }
 
-question addition (){ // returns the correct answer
+question addition (){
 	question q;
 	q.a = randint(level-4, level*2);
 	q.b = randint(level-4, level*2);
 	q.answer = q.a + q.b;
-	q.symbol = '+'; //this can be the ordinal of the better character from the font file esp division 
+	q.symbol = '+';
 	return q;
 }
 
@@ -68,9 +71,26 @@ question division() {
 question (*functions[])() = {addition, subtraction, multiplication, division};
 
 void print_question(question q){
-	// based on length of a and b and answer, 
-	// right justify everything 
-	// for now just print it stupidly:
+	static int scale = 10;
+	int cursor_x = 1000;
+	int cursor_y = 300;
+	while (q.a){
+		draw_char(cursor_x, cursor_y, (char)(q.a%10) + '0', YELLOW, scale);
+		cursor_x -= scale*10;
+		q.a /= 10;
+	}
+	cursor_x = 1000;
+	cursor_y += scale*16;
+
+	while (q.b){
+		draw_char(cursor_x, cursor_y, (char)(q.b%10) + '0', YELLOW, scale);
+		cursor_x -= scale*10;
+		q.b /= 10;
+	}
+	cursor_x -= scale*10;
+	draw_char(cursor_x, cursor_y, q.symbol, YELLOW, scale);
+
+	// use the new draw_char function
 	printf("%4d\n%c%3d\n", q.a, q.symbol, q.b);
 }
 
@@ -86,7 +106,7 @@ void update_level(double time_taken){
 
 void *timer(void *time){
 	//int duration = *(int*)time;
-	sleep(60);
+	sleep(6);
 	// instead of just sleeping this can also draw the status bar. 
 	// kill the program, show the level
 	if (kill(getpid(), SIGTERM) != 0)
@@ -99,6 +119,10 @@ void handle_sigterm(int signum){
 }
 
 int main(){
+	buffer_init();
+	init_font();
+
+
 	if (atexit(cleanup) != 0){
 		perror("failed to register cleanup");
 	}
