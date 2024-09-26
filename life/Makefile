@@ -1,6 +1,7 @@
 CC = gcc
-CFLAGS = -Wall -g 
-SRCS = main.c draw.c life.c
+INC_DIR = ../include
+CFLAGS = -Wall -g -I$(INC_DIR)
+SRCS = main.c ../draw/draw.c life.c
 OBJS = $(SRCS:.c=.o)
 LDFLAGS = -lm
 TARGET = life

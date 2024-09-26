@@ -44,7 +44,7 @@ void draw_vertical_line(int x, int y1, int y2, uint32_t pixel);
 void trace_rect(int x, int y, int w, int h, uint32_t color);
 void clear_buffer();
 void grid(int w, int h); // width and height of the grid in pixels
-void draw_char(int x, int y, char c, uint32_t color, int scale); //scale multiplies the base 16 height font
+void draw_char(int x, int y, size_t c, uint32_t color, int scale); //scale multiplies the base 16 height font
 
 void draw_circle(double cx, double cy, int radius, uint32_t color);
 void fill_circle(double cx, double cy, int radius, uint32_t color);

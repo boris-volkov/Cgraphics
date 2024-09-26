@@ -198,7 +198,7 @@ unsigned char *font_data;
 #define PSF1_MAGIC1 0x04	// 4
 
 int scale = 20;
-void draw_char(int x, int y, char c, uint32_t color, int scale) {
+void draw_char(int x, int y, size_t c, uint32_t color, int scale) {
 	// Assume 'font_data' contains the bitmap for character 'c'
 	unsigned char *glyph = &font_data[c * font.charsize];
 

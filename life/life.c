@@ -1,5 +1,5 @@
 #include "life.h"
-#include "draw.h"
+#include <draw.h>
 #include <stdlib.h>
 #include <math.h>
 #include <time.h>
