@@ -704,7 +704,7 @@ static void modeset_draw(int fd)
 
 	/* init variables */
 	srand(time(&start));
-	FD_ZERO(&fds);
+	FD_ZERO(&fds); // initializes file descriptor set to be empty
 	memset(&v, 0, sizeof(v));
 	memset(&ev, 0, sizeof(ev));
 	/* Set this to only the latest version you support. Version 2
@@ -712,30 +712,36 @@ static void modeset_draw(int fd)
 	ev.version = 2;
 	ev.page_flip_handler = modeset_page_flip_event;
 
-	/* redraw all outputs */
+	/* redraw all outputs
+	 * this doesn't seem to do anything, since modeset_draw_dev is called on every frame
+	 * this seems to be just for the initial frame
 	for (iter = modeset_list; iter; iter = iter->next) {
 		iter->r = rand() % 0xff;
 		iter->g = rand() % 0xff;
 		iter->b = rand() % 0xff;
 		iter->r_up = iter->g_up = iter->b_up = true;
 
-		modeset_draw_dev(fd, iter);
+		modeset_draw_dev(fd, iter); // sends draw_dev to each device in the list
 	}
+	*/
 
 	/* wait 5s for VBLANK or input events */
-	while (time(&cur) < start + 525) {
-		FD_SET(0, &fds);
-		FD_SET(fd, &fds);
-		v.tv_sec = start + 525 - cur;
+	while (time(&cur) < start + 5250) {
+		// runs select 
+		FD_SET(0, &fds); // adds stdin to fd set
+		FD_SET(fd, &fds); 
+		v.tv_sec = start + 5250 - cur; // to potentially wait until the end of the loop, at most
 
-		ret = select(fd + 1, &fds, NULL, NULL, &v);
+		ret = select(fd + 1, &fds, NULL, NULL, &v); // checking for readability
 		if (ret < 0) {
 			fprintf(stderr, "select() failed with %d: %m\n", errno);
 			break;
-		} else if (FD_ISSET(0, &fds)) {
+		} else if (FD_ISSET(0, &fds)) { // stdin is readable, means got a user input
+																		// generally ISSET checks whether the bit is on or off 
+																		// they are set on for every device that is readable 
 			fprintf(stderr, "exit due to user-input\n");
 			break;
-		} else if (FD_ISSET(fd, &fds)) {
+		} else if (FD_ISSET(fd, &fds)) { // drm fd is readable
 			drmHandleEvent(fd, &ev);
 		}
 	}
@@ -855,33 +861,31 @@ void draw_ball(ball *b, struct modeset_dev *dev, struct modeset_buf *buf){
 
 static void modeset_draw_dev(int fd, struct modeset_dev *dev)
 {
+	// this is a single frame of the ball collision animation
 	struct modeset_buf *buf;
 	unsigned int j, k, off;
 	int ret;
-	// draws a single circle to the front buffer
-	buf = &dev->bufs[dev->front_buf ^ 1]; 
-			clear_buffer(dev, buf);
-		for (int j = 0; j < ball_count; j++){
-			//clear_ball(&balls[j], dev, buf);
-			for (int other = j+1; other < ball_count ; other++){
-				if (touching(balls[j], balls[other])){
-					//clear_ball(balls + other, dev, buf);
-					rewind_overlap(&balls[j], &balls[other]);
-					collision(&balls[j], &balls[other]);
-				}
+	buf = &dev->bufs[dev->front_buf ^ 1]; // draws to the back buffer
+	clear_buffer(dev, buf);
+	for (int j = 0; j < ball_count; j++){
+		for (int other = j+1; other < ball_count ; other++){
+			if (touching(balls[j], balls[other])){
+				rewind_overlap(&balls[j], &balls[other]);
+				collision(&balls[j], &balls[other]);
 			}
-			wall_collision(&balls[j]);
-			update_position(&balls[j]);
-			draw_ball(balls + j, dev, buf);
 		}
+		wall_collision(&balls[j]);
+		update_position(&balls[j]);
+		draw_ball(balls + j, dev, buf);
+	}
 
-	ret = drmModePageFlip(fd, dev->crtc, buf->fb,
-			DRM_MODE_PAGE_FLIP_EVENT, dev);
+
+	ret = drmModePageFlip(fd, dev->crtc, buf->fb, DRM_MODE_PAGE_FLIP_EVENT, dev);
 	if (ret) {
 		fprintf(stderr, "cannot flip CRTC for connector %u (%d): %m\n",
 				dev->conn, errno);
 	} else {
-		dev->front_buf ^= 1;
+		dev->front_buf ^= 1; // swap the front buffer
 		dev->pflip_pending = true;
 	}
 }
